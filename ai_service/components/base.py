@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'django_celery_results',
 
     # 业务组件
+    'apps.core',
     'apps.log_service'
 ]
 
