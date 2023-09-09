@@ -8,5 +8,6 @@ load_dotenv()
 include(
     'components/base.py',
     'components/database.py',
+    'components/rest_framework.py',
     optional('local_settings.py')
 )
