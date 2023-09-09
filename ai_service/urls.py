@@ -24,6 +24,8 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
+from ai_service.components.base import DEBUG
+
 schema_view = get_schema_view(
     openapi.Info(
         title="API",
@@ -51,6 +53,11 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
 ]
+
+if DEBUG:
+    import debug_toolbar
+
+    urlpatterns += [path('__debug__/', include(debug_toolbar.urls))]
 
 for app_config in apps.get_app_configs():
     app_name = app_config.name
