@@ -1,9 +1,9 @@
 FROM python:3.10
 WORKDIR /apps
 
-ADD ./requirements.txt ./requirements.txt
+ADD ./requirements ./requirements
 # 使用腾讯云镜像源
-RUN pip install -r requirements.txt -i https://mirrors.tencent.com/pypi/simple
+RUN pip install -r ./requirements/requirements.txt -i https://mirrors.tencent.com/pypi/simple
 
 ENV SECRET_KEY django-insecure-wi*fg%43$^^bwbus!1+p2sud3wnpe@3$is$3h8$cdw6h+s!-ug
 ENV DEBUG False

@@ -9,5 +9,6 @@ include(
     'components/base.py',
     'components/database.py',
     'components/rest_framework.py',
+    'components/celery.py',
     optional('local_settings.py')
 )

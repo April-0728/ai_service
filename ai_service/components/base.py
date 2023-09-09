@@ -17,14 +17,25 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'drf_yasg',
+
+    # 基础组件
     'django_comment_migrate',
-    'corsheaders',
-    'django_celery_beat',
-    'django_celery_results',
+
+    # Web组件
     'rest_framework',
+    'drf_yasg',
+    'corsheaders',
     'django_filters',
     'rest_framework_simplejwt.token_blacklist',
+
+    # Celery
+    'django_celery_beat',
+    'django_celery_results',
+
+    # 其他
+    'version_log',
+
+    # 业务组件
     'apps.log_service'
 ]
 
@@ -85,17 +96,6 @@ USE_TZ = True
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = 'static/'
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, "static"),
-# ]
-# MEDIA_ROOT = "media"
-MEDIA_URL = "/media/"
 
-CELERY_BROKER_URL = 'sqla+sqlite:///celery.sqlite3'
-DJANGO_CELERY_BEAT_TZ_AWARE = False
-CELERY_ENABLE_UTC = False
-CELERY_WORKER_CONCURRENCY = 2  # 并发数
-CELERY_MAX_TASKS_PER_CHILD = 5  # 没个worker最多执行5个任务便自我销毁释放内存
-CELERY_TIMEZONE = TIME_ZONE  # celery 时区问题
-CELERY_RESULT_BACKEND = 'django-db'  # celery结果存储到数据库中
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'  # Backend数据库
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = "/media/"

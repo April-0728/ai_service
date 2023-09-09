@@ -47,6 +47,8 @@ urlpatterns = [
     # 验证token
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
 
+    path('api/version_log', include('version_log.urls', namespace='version_log')),
+
     path('admin/', admin.site.urls),
 ]
 
