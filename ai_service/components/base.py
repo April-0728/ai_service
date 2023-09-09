@@ -32,9 +32,6 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'django_celery_results',
 
-    # 其他
-    'version_log',
-
     # 业务组件
     'apps.log_service'
 ]

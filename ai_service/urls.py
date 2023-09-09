@@ -14,6 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
+
 from django.contrib import admin
 from django.urls import path, include
 from django.apps import apps
@@ -47,16 +49,16 @@ urlpatterns = [
     # 验证token
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
 
-    path('api/version_log', include('version_log.urls', namespace='version_log')),
-
     path('admin/', admin.site.urls),
 ]
 
 for app_config in apps.get_app_configs():
     app_name = app_config.name
     try:
-        if 'apps.' in app_name:
+        # 如何app_name是apps.开头的，就import这个app的urls.py
+        if app_name.startswith('apps.'):
             urls_module = __import__(f'{app_name}.urls', fromlist=['urlpatterns'])
             urlpatterns.append(path('', include(urls_module)))
+
     except ImportError:
         pass

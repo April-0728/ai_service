@@ -7,5 +7,5 @@ router = SimpleRouter()
 router.register(r"log_reduce", LogReduceView, basename="log_reduce")
 
 urlpatterns = [
-    path('api/logs/', include(router.urls)),
+    path('api/logs_algorithm/', include(router.urls)),
 ]
