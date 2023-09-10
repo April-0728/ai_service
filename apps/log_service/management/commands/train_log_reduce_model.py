@@ -16,3 +16,5 @@ class Command(BaseCommand):
         self.stdout.write('model_dir: %s' % options['model_dir'])
         self.stdout.write('algorithm: %s' % options['algorithm'])
         self.stdout.write('algorithm_config: %s' % options['algorithm_config'])
+
+        # TODO: 训练LogReduce模型

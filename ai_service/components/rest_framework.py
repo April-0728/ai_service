@@ -7,6 +7,7 @@ REST_FRAMEWORK = {
     "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",  # 日期时间格式配置
     "DATE_FORMAT": "%Y-%m-%d",
     "DEFAULT_FILTER_BACKENDS": (
+        'django_filters.rest_framework.DjangoFilterBackend',
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
@@ -36,7 +37,6 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
-
 
 SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {"basic": {"type": "basic"}},
