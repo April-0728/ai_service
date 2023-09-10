@@ -4,11 +4,13 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = str(os.getenv('SECRET_KEY'))
+SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = (os.getenv('DEBUG') == 'True')
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = ['*']
+
+# 基础组件
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -16,25 +18,29 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # 基础组件
     'django_comment_migrate',
     'debug_toolbar',
+]
 
-    # Web组件
+# Web组件
+INSTALLED_APPS += [
     'rest_framework',
     'drf_yasg',
     'corsheaders',
     'django_filters',
     'rest_framework_simplejwt.token_blacklist',
+]
 
-    # Celery
+# Celery
+INSTALLED_APPS += [
     'django_celery_beat',
     'django_celery_results',
+]
 
-    # 业务组件
+# 业务组件
+INSTALLED_APPS += [
     'apps.core',
-    'apps.log_service'
+    'apps.log_service',
 ]
 
 MIDDLEWARE = [
@@ -48,7 +54,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-
 ]
 
 ROOT_URLCONF = 'ai_service.urls'
@@ -94,10 +99,10 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = BASE_DIR / 'static'
 STATIC_URL = 'static/'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = "/media/"
 
 INTERNAL_IPS = ('127.0.0.1',)
