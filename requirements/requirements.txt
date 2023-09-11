@@ -2,7 +2,7 @@ Django==4.2.5
 django-split-settings==1.2.0
 daphne==4.0.0
 python-dotenv==1.0.0
-mysqlclient==2.2.0
+pymysql==1.1.0
 psycopg2-binary==2.9.7
 tqdm==4.66.1
 requests==2.31.0
