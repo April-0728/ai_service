@@ -20,17 +20,22 @@ from django.contrib import admin
 from django.urls import path, include
 from django.apps import apps
 from rest_framework import permissions
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView, TokenBlacklistView
 
 from ai_service.components.base import DEBUG
 
 urlpatterns = [
     # rest_framework_simplejwt自带的得到token
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+
     # 刷新JWT
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
     # 验证token
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+
+    # 将token加入黑名单
+    path('api/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
 
     path('admin/', admin.site.urls),
 ]
