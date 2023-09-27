@@ -138,7 +138,7 @@ class LogReduceView(ViewSet):
         begin = self.format_datetime(begin)
         end = self.format_datetime(end)
         # connect the MongoDB
-        with  MongoClient(os.environ.get("MONGODB_CLIENT")) as MGclient:
+        with  MongoClient(os.environ.get("MONGODB_HOST")) as MGclient:
             db_name = os.environ.get("MONGODB_DATABASE")
             db = MGclient[db_name]
 
@@ -217,83 +217,14 @@ class LogReduceView(ViewSet):
         # get the index name from MongoDB
         index_name = self.get_index(begin, end)
 
-        def fetch_and_predict(index, results):
-            try:
-                # query condition
-                initial_query = {
-                    "query": {
-                        "bool": {
-                            "must": [
-                                {
-                                    "match": {
-                                        "message": query
-                                    }
-                                },
-                                {
-                                    "range": {
-                                        "timestamp": {
-                                            "gte": begin,
-                                            "lte": end,
-                                            "format": "yyyy-MM-dd HH:mm:ss"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-                # initial query
-                initial_url = f'{os.environ.get("OPENSEARCH_HOST")}/{index}/_search?scroll=1m&size=10000'  # 包括索引名称
-                response = requests.get(initial_url,
-                                        auth=(
-                                            os.environ.get("OPENSEARCH_USERNAME"),
-                                            os.environ.get("OPENSEARCH_PASSWORD")),
-                                        headers={'Content-Type': 'application/json'}, json=initial_query,
-                                        verify=False)
-                response.raise_for_status()  # 检查是否有HTTP错误
-                res = json.loads(response.text)
-                hits = res.get('hits', {}).get('hits', [])
-                messages = self.fetch_messages(hits)
-                self.predict_template(algorithm, model_name, messages, results)
-
-                total_hits = res.get('hits', {}).get('total', {}).get('value', 0)
-                self.logger.info(f"The number of hits in {index} is {total_hits}")
-                total_cnt = 0
-
-                if total_hits > 0:
-                    with tqdm(total=total_hits, unit='doc', dynamic_ncols=True) as pbar:
-                        while True:
-                            scroll_id = res.get('_scroll_id')
-                            cnt = len(res.get('hits', {}).get('hits', []))
-                            total_cnt += cnt
-                            if total_hits <= total_cnt:
-                                break;
-                            else:
-                                scroll_query = {
-                                    "scroll": param["scroll_time"],
-                                    "scroll_id": scroll_id
-                                }
-                                response = requests.get(f'{os.environ.get("OPENSEARCH_HOST")}/_search/scroll',
-                                                        auth=(os.environ.get("OPENSEARCH_USERNAME"),
-                                                              os.environ.get("OPENSEARCH_PASSWORD")),
-                                                        headers={'Content-Type': 'application/json'},
-                                                        json=scroll_query, verify=False)
-                                res = json.loads(response.text)
-                                hits = res.get('hits', {}).get('hits', [])
-                                # predict the template if hits are not none
-                                if hits:
-                                    messages = self.fetch_messages(hits)
-                                    self.predict_template(algorithm, model_name, messages, results)
-                                pbar.update(len(hits))
-            except Exception as e:
-                self.logger.error(f"Error in fetch_and_predict: {str(e)}, index_name: {index}")
-
         # create the thread pool
         num_threads = 4
         try:
             # Use joblib to parallelize task execution
             with parallel_backend(backend="threading", n_jobs=num_threads):
-                Parallel()(delayed(fetch_and_predict)(index, results) for index in index_name)
+                Parallel()(
+                    delayed(self.fetch_and_predict)(index, results, query, begin, end, algorithm, param, model_name) for
+                    index in index_name)
 
         except Exception as e:
             self.logger.error(f"Error in predict_from_datalist: {str(e)}")
@@ -302,3 +233,74 @@ class LogReduceView(ViewSet):
         results_values = results.values()
         return Response({'status': 'ok',
                          'results': results_values})
+
+    def fetch_and_predict(self, index, results, query, begin, end, algorithm, param, model_name):
+        try:
+            # query condition
+            initial_query = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "match": {
+                                    "message": query
+                                }
+                            },
+                            {
+                                "range": {
+                                    "timestamp": {
+                                        "gte": begin,
+                                        "lte": end,
+                                        "format": "yyyy-MM-dd HH:mm:ss"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+            # initial query
+            initial_url = f'{os.environ.get("OPENSEARCH_HOST")}/{index}/_search?scroll=1m&size=10000'  # 包括索引名称
+            response = requests.get(initial_url,
+                                    auth=(
+                                        os.environ.get("OPENSEARCH_USERNAME"),
+                                        os.environ.get("OPENSEARCH_PASSWORD")),
+                                    headers={'Content-Type': 'application/json'}, json=initial_query,
+                                    verify=False)
+            response.raise_for_status()  # 检查是否有HTTP错误
+            res = json.loads(response.text)
+            hits = res.get('hits', {}).get('hits', [])
+            messages = self.fetch_messages(hits)
+            self.predict_template(algorithm, model_name, messages, results)
+
+            total_hits = res.get('hits', {}).get('total', {}).get('value', 0)
+            self.logger.info(f"The number of hits in {index} is {total_hits}")
+            total_cnt = 0
+
+            if total_hits > 0:
+                with tqdm(total=total_hits, unit='doc', dynamic_ncols=True) as pbar:
+                    while True:
+                        scroll_id = res.get('_scroll_id')
+                        cnt = len(res.get('hits', {}).get('hits', []))
+                        total_cnt += cnt
+                        if total_hits <= total_cnt:
+                            break;
+                        else:
+                            scroll_query = {
+                                "scroll": param["scroll_time"],
+                                "scroll_id": scroll_id
+                            }
+                            response = requests.get(f'{os.environ.get("OPENSEARCH_HOST")}/_search/scroll',
+                                                    auth=(os.environ.get("OPENSEARCH_USERNAME"),
+                                                          os.environ.get("OPENSEARCH_PASSWORD")),
+                                                    headers={'Content-Type': 'application/json'},
+                                                    json=scroll_query, verify=False)
+                            res = json.loads(response.text)
+                            hits = res.get('hits', {}).get('hits', [])
+                            # predict the template if hits are not none
+                            if hits:
+                                messages = self.fetch_messages(hits)
+                                self.predict_template(algorithm, model_name, messages, results)
+                            pbar.update(len(hits))
+        except Exception as e:
+            self.logger.error(f"Error in fetch_and_predict: {str(e)}, index_name: {index}")
