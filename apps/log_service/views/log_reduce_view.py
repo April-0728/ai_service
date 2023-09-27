@@ -8,6 +8,7 @@ import requests
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from joblib import Parallel, delayed, parallel_backend
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
@@ -17,6 +18,7 @@ from apps.core.utils.date_utils import DateUtils
 from apps.core.utils.mongo_driver import MongoDriver
 from apps.log_service.algorithm.drain3.template_miner import TemplateMiner
 from apps.log_service.algorithm.drain3.template_miner_config import TemplateMinerConfig
+from apps.log_service.serializers.log_reduce_serializer import LogReduceSerializer
 
 
 class LogReduceView(ViewSet):
@@ -46,7 +48,7 @@ class LogReduceView(ViewSet):
     # predict the templates
     def predict_template(self, algorithm, model_name, logs, results):
         if algorithm == "drain3":
-            if model_name == "none":
+            if model_name is None:
                 config = TemplateMinerConfig()
                 config.load(os.path.join(os.path.dirname(__file__), '../algorithm/drain3/drain3.ini'))
                 config.profiling_enabled = False
@@ -89,39 +91,21 @@ class LogReduceView(ViewSet):
 
     @swagger_auto_schema(
         method="post",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "algorithm": openapi.Schema(type=openapi.TYPE_STRING, example="drain3", description="预测算法"),
-                "param": openapi.Schema(type=openapi.TYPE_OBJECT, example={"partition": ":", }, description="其他参数"),
-                "model_name": openapi.Schema(type=openapi.TYPE_STRING, example="model1",
-                                             description="预测模板，不使用模板填none"),
-                "logs": openapi.Schema(type=openapi.TYPE_ARRAY,
-                                       items=openapi.Schema(type=openapi.TYPE_STRING),
-                                       example=["loga", "logb"],
-                                       description="日志记录")
-            },
-            required=["algorithm", "logs"],
-        ),
-        operation_description="模板预测",
+        request_body=LogReduceSerializer,
+        operation_description="日志模式发现",
         tags=["Template Prediction"],
-        deprecated=False,
     )
     @action(methods=["POST"], detail=False, url_path=r"predict")
     def predict(self, request):
-        data = request.data
-        algorithm = data["algorithm"]
-        param = data["param"]
-        model_name = data["model_name"]
-        logs = data["logs"]
-        # results value = {template:"", size:1}
-
-        results = {}
-        self.predict_template(algorithm, model_name, logs, results)
-        self.logger.info(f"-------The number of templates is {len(results)}--------")
-        results_values = results.values()
-        return Response({'status': 'ok',
-                         'results': results_values})
+        serialize = LogReduceSerializer(data=request.data)
+        if serialize.is_valid():
+            results = {}
+            self.predict_template(serialize.validated_data['algorithm'],
+                                  serialize.validated_data['model_name'],
+                                  serialize.validated_data['logs'], results)
+            return Response({'results': results.values()})
+        else:
+            return Response(serialize.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_datainsight_index(self, begin, end):
         begin = DateUtils.str_to_timestamp(begin)
