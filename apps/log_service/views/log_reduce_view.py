@@ -1,18 +1,20 @@
 import json
-import os.path
-import os
-import pickle
 import logging
+import os
+import os.path
+import pickle
+
 import requests
-from datetime import datetime
-from joblib import Parallel, delayed, parallel_backend
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from pymongo import MongoClient
+from joblib import Parallel, delayed, parallel_backend
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from tqdm import tqdm
+
+from apps.core.utils.date_utils import DateUtils
+from apps.core.utils.mongo_driver import MongoDriver
 from apps.log_service.algorithm.drain3.template_miner import TemplateMiner
 from apps.log_service.algorithm.drain3.template_miner_config import TemplateMinerConfig
 
@@ -101,13 +103,7 @@ class LogReduceView(ViewSet):
             },
             required=["algorithm", "logs"],
         ),
-        responses={
-            "200": "模板提取成功",
-            "401": "Unauthorized",
-            "404": "Not Found",
-        },
         operation_description="模板预测",
-        operation_id="template_prediction",
         tags=["Template Prediction"],
         deprecated=False,
     )
@@ -127,53 +123,26 @@ class LogReduceView(ViewSet):
         return Response({'status': 'ok',
                          'results': results_values})
 
-    # fomat the datetime
-    def format_datetime(self, time_string):
-        date_object = datetime.strptime(time_string, "%Y-%m-%d %H:%M:%S")
-        return int(date_object.timestamp())
+    def get_datainsight_index(self, begin, end):
+        begin = DateUtils.str_to_timestamp(begin)
+        end = DateUtils.str_to_timestamp(end)
 
-    # get index_name from MongoDB
-    def get_index(self, begin, end):
-        # format the begin and end
-        begin = self.format_datetime(begin)
-        end = self.format_datetime(end)
-        # connect the MongoDB
-        with  MongoClient(os.environ.get("MONGODB_HOST")) as MGclient:
-            db_name = os.environ.get("MONGODB_DATABASE")
-            db = MGclient[db_name]
+        driver = MongoDriver()
 
-            collection_name = os.environ.get("MONGODB_COLLECTION")
-            collection = db[collection_name]
-            self.logger.info(f"Have loaded the collection {collection_name} of MongoDB {db_name}")
-            # query condition
-            query = {
-                "$or": [
-                    {
-                        "$and": [
-                            {"begin": {"$gte": begin, "$lt": end}},
-                            {"end": {"$gt": begin, "$lte": end}}
-                        ]
-                    },
-                    {"begin": 0}
-                ]
-            }
-            index_name = []
-            records = collection.find(query)
-            for record in records:
-                index_name.append(record["index_name"])
-            self.logger.info(f"Return {len(index_name)} matched indexes")
+        query = {
+            "$or": [
+                {
+                    "$and": [
+                        {"begin": {"$gte": begin, "$lt": end}},
+                        {"end": {"$gt": begin, "$lte": end}}
+                    ]
+                },
+                {"begin": 0}
+            ]
+        }
+        query_results = driver.query_collection('index_ranges', query)
+        index_name = [index.get('index_name') for index in query_results]
         return index_name
-
-    # get messages from hits
-    def fetch_messages(self, hits):
-        messages = []
-        for hit in hits:
-            source = hit.get('_source', {})
-            message = source.get('message')
-            if message:
-                messages.append(message)
-        self.logger.info(f"Fetch {len(messages)} messages to predict template")
-        return messages
 
     @swagger_auto_schema(
         method="post",
@@ -215,7 +184,7 @@ class LogReduceView(ViewSet):
         model_name = data["model_name"]
 
         # get the index name from MongoDB
-        index_name = self.get_index(begin, end)
+        index_name = self.get_datainsight_index(begin, end)
 
         # create the thread pool
         num_threads = 4
@@ -259,18 +228,19 @@ class LogReduceView(ViewSet):
                     }
                 }
             }
+
             # initial query
-            initial_url = f'{os.environ.get("OPENSEARCH_HOST")}/{index}/_search?scroll=1m&size=10000'  # 包括索引名称
+            initial_url = f'{os.environ.get("OPENSEARCH_HOST")}/{index}/_search?scroll=1m&size=10000'
             response = requests.get(initial_url,
                                     auth=(
                                         os.environ.get("OPENSEARCH_USERNAME"),
                                         os.environ.get("OPENSEARCH_PASSWORD")),
                                     headers={'Content-Type': 'application/json'}, json=initial_query,
                                     verify=False)
-            response.raise_for_status()  # 检查是否有HTTP错误
+            response.raise_for_status()
             res = json.loads(response.text)
             hits = res.get('hits', {}).get('hits', [])
-            messages = self.fetch_messages(hits)
+            messages = [hit.get('_source', {}).get('message') for hit in hits]
             self.predict_template(algorithm, model_name, messages, results)
 
             total_hits = res.get('hits', {}).get('total', {}).get('value', 0)
