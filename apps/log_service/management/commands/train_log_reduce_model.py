@@ -1,4 +1,10 @@
+import os
+import pickle
+
 from django.core.management import BaseCommand
+
+from apps.log_service.algorithm.drain3.template_miner import TemplateMiner
+from apps.log_service.algorithm.drain3.template_miner_config import TemplateMinerConfig
 
 
 class Command(BaseCommand):
@@ -18,3 +24,31 @@ class Command(BaseCommand):
         self.stdout.write('algorithm_config: %s' % options['algorithm_config'])
 
         # TODO: 训练LogReduce模型
+        data_dir = options["data_dir"]
+        model_dir = options["model_dir"]
+        algorithm = options["algorithm"]
+
+        if algorithm=="drain3":
+            config = TemplateMinerConfig()
+            current_directory = os.path.dirname(os.path.abspath(__file__))
+            config_file_path = os.path.join(current_directory, '../algorithm/drain3/drain3.ini')
+            config.load(config_file_path)
+            config.profiling_enabled = False
+            template_miner = TemplateMiner(config=config)
+
+            with open(data_dir) as f:
+                logs = f.readlines()
+
+            # 训练模型
+            for log in logs:
+                log = log.rstrip()
+                log = log.partition(": ")[2]
+                result = template_miner.add_log_message(log)
+
+            #保存训练好的template_miner模型
+            with open(model_dir, "wb") as f:
+                pickle.dump(template_miner, f)
+
+
+        elif algorithm=="spell":
+            pass

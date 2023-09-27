@@ -4,3 +4,4 @@ venv
 .env
 static
 logs
+models
