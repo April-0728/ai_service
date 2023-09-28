@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from better_exceptions.integrations.django import skip_errors_filter
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 LOGS_DIR = os.path.join(BASE_DIR, "logs")
@@ -22,6 +24,12 @@ CONSOLE_LOG_FORMAT = (
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    'filters': {
+        'skip_errors': {
+            '()': 'django.utils.log.CallbackFilter',
+            'callback': skip_errors_filter,
+        }
+    },
     "formatters": {
         "standard": {"format": STANDARD_LOG_FORMAT},
         "console": {
@@ -42,6 +50,7 @@ LOGGING = {
             "backupCount": 5,  # 最多备份5个
             "formatter": "standard",
             "encoding": "utf-8",
+            'filters': ['skip_errors'],
         },
         "error": {
             "level": "ERROR",
@@ -51,11 +60,13 @@ LOGGING = {
             "backupCount": 3,  # 最多备份3个
             "formatter": "standard",
             "encoding": "utf-8",
+            'filters': ['skip_errors'],
         },
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "console",
+            'filters': ['skip_errors'],
         },
 
     },

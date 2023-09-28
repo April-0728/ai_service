@@ -55,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'better_exceptions.integrations.django.BetterExceptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'ai_service.urls'
