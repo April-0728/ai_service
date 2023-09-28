@@ -1,0 +1,8 @@
+from django.conf import settings
+import os
+
+MONGODB_URL = os.getenv('MONGODB_URL')
+LOD_REDUCE_MODEL_PATH = os.getenv('LOD_REDUCE_MODEL_PATH')
+OPENSEARCH_HOST = os.getenv('OPENSEARCH_HOST')
+OPENSEARCH_USERNAME = os.getenv('OPENSEARCH_USERNAME')
+OPENSEARCH_PASSWORD = os.getenv('OPENSEARCH_PASSWORD')
