@@ -27,9 +27,10 @@ class LogReduceView(ViewSet):
         serialize = LogReduceRequest(data=request.data)
         if serialize.is_valid():
             validated_data = serialize.validated_data
-            results = self.log_reduce_service.predict_template(validated_data['algorithm'],
-                                                               validated_data['model_name'],
-                                                               validated_data['logs'])
+            results = {}
+            self.log_reduce_service.predict_template(validated_data['algorithm'],
+                                                     validated_data['model_name'],
+                                                     validated_data['logs'], results)
             return ResponseUtils.response_success(results.values())
         else:
             return ResponseUtils.response_failed(error_message=serialize.errors)

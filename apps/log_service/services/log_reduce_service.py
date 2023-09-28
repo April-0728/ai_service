@@ -20,7 +20,7 @@ class LogReduceService:
         self.log_reduce_model = self.load_log_reduce_models()
 
     def load_log_reduce_models(self):
-        if LOD_REDUCE_MODEL_PATH is None:
+        if LOD_REDUCE_MODEL_PATH == '':
             pass
         else:
             if os.path.exists(LOD_REDUCE_MODEL_PATH) and os.path.isdir(LOD_REDUCE_MODEL_PATH):
@@ -36,8 +36,7 @@ class LogReduceService:
             else:
                 self.logger.info(f"{LOD_REDUCE_MODEL_PATH} is not exist or not a directory")
 
-    def predict_template(self, algorithm, model_name, logs):
-        results = {}
+    def predict_template(self, algorithm, model_name, logs, results):
         if algorithm == "drain3":
             if model_name == "":
                 config = TemplateMinerConfig()
@@ -80,11 +79,7 @@ class LogReduceService:
         elif algorithm == "spell":
             pass
 
-        return results
-
     def get_datainsight_index(self, begin, end):
-        begin = DateUtils.str_to_timestamp(begin)
-        end = DateUtils.str_to_timestamp(end)
 
         with MongoClient(MONGODB_URL) as client:
             db = client.graylog_dev
@@ -122,8 +117,8 @@ class LogReduceService:
                             {
                                 "range": {
                                     "timestamp": {
-                                        "gte": begin,
-                                        "lte": end,
+                                        "gte": begin.strftime("%Y-%m-%d %H:%M:%S"),
+                                        "lte": end.strftime("%Y-%m-%d %H:%M:%S"),
                                         "format": "yyyy-MM-dd HH:mm:ss"
                                     }
                                 }
@@ -172,6 +167,6 @@ class LogReduceService:
                             if hits:
                                 messages = self.fetch_messages(hits)
                                 self.predict_template(algorithm, model_name, messages, results)
-                            pbar.update(len(hits))
+                                pbar.update(len(hits))
         except Exception as e:
             self.logger.error(f"Error in fetch_and_predict: {str(e)}, index_name: {index}")
