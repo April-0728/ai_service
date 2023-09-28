@@ -11,5 +11,6 @@ include(
     'components/rest_framework.py',
     'components/celery.py',
     'components/log_config.py',
-    optional('local_settings.py')
+    optional('local_settings.py'),
+    optional('log_reduce.py')
 )
